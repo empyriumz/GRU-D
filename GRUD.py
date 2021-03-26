@@ -17,9 +17,7 @@ class DiagLinear(nn.Module):
         super(DiagLinear, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-
-        self.diag_matrix = torch.eye(in_features, requires_grad=False)
-       
+        self.diag_matrix = torch.eye(in_features, requires_grad=False)       
         self.weight = Parameter(torch.Tensor(out_features, in_features))
         if bias:
             self.bias = Parameter(torch.Tensor(out_features))
@@ -72,8 +70,6 @@ class GRUD(nn.Module):
         GRU-D:
             input_dim: variable dimension of each time
             hidden_dim: dimension of hidden_state
-            mask_dim: dimension of masking vector
-            X_mean: the mean of the historical input data
         """
 
         super(GRUD, self).__init__()

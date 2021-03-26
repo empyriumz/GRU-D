@@ -34,15 +34,13 @@ class BatchDataGenerator(object):
     def __init__(
         self,
         dataloader,
-        encoder,
-        normalizer,
         batch_size,
         shuffle=False,
     ):
         self.batch_size = batch_size
         self.shuffle = shuffle
 
-        self._load_per_patient_data(dataloader, encoder, normalizer)
+        self._load_per_patient_data(dataloader)
         self.steps = (len(self.data[1]) + batch_size - 1) // batch_size
         self.lock = threading.Lock()
         self.generator = self._generator()
@@ -58,8 +56,9 @@ class BatchDataGenerator(object):
         for i in range(N):
             x = dataloader._data["x"][i]
             y = dataloader._data["y"][i]
-            x_last = dataloader._data["x_last"][i]
+            x_last = dataloader._data["last_x"][i]
             mask = dataloader._data["mask"][i]
+            interval = dataloader._data["interval"][i]
             interval = (interval - interval.min()) / (interval.max() - interval.min() + 1e-8)
            
             x_list.append(x)
@@ -81,8 +80,8 @@ class BatchDataGenerator(object):
                 order = list(range(N))
                 random.shuffle(order)
                 tmp_data = [[None] * N, [None] * N, [None] * N]
-                tmp_interval = [[None] * N]
-                tmp_mask = [[None] * N]
+                tmp_interval = [None] * N
+                tmp_mask = [None] * N
                 for i in range(N):
                     tmp_data[0][i] = self.data[0][order[i]]
                     tmp_data[1][i] = self.data[1][order[i]]

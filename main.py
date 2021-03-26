@@ -28,20 +28,21 @@ def parse_arguments(parser):
         default="/host/StageNet/mortality_data",
         help="The path to the MIMIC-III data directory",
     )
-    parser.add_argument("--file_name", type=str, help="File name to save model")
+    parser.add_argument("--file_name", type=str, help="File name to save the model")
     parser.add_argument(
-        "--partial_data", "-p", type=int, default=0, help="Use part of training data"
+        "--partial_data", "-p", type=int, default=0, help="Use part of the training data"
     )
     parser.add_argument(
         "--batch_size", type=int, default=256, help="Training batch size"
     )
     parser.add_argument("--epochs", "-e", type=int, default=20, help="Training epochs")
-    parser.add_argument("--lr", type=float, default=0.0015, help="Learing rate")
+    parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
+    parser.add_argument("--debug", type=int, default=0, help="Loading processed data to speed up debugging")
     parser.add_argument(
         "--weight_decay",
         type=float,
         default=0,
-        help="Value controlling the coarse grain level",
+        help="Adam l2 decay weight",
     )
     parser.add_argument(
         "--input_dim", type=int, default=1, help="Dimension of visit record data"
@@ -78,15 +79,15 @@ if __name__ == "__main__":
         dataset_dir=os.path.join(args.data_path, "train"),
         listfile=os.path.join(args.data_path, "train-mortality.csv"),
         partial_data=model_para["partial_data"],
+        debug=model_para["debug"]
     )
-    pos_weight = torch.sqrt(
-        torch.tensor(train_data_loader.pos_weight, dtype=torch.float32)
-    )
-
+    pos_weight = train_data_loader.pos_weight
+    
     val_data_loader = MortalityDataLoader(
         dataset_dir=os.path.join(args.data_path, "train"),
         listfile=os.path.join(args.data_path, "val-mortality.csv"),
         partial_data=model_para["partial_data"],
+        debug=model_para["debug"]
     )
 
     train_data_gen = utils.BatchDataGenerator(
@@ -113,9 +114,9 @@ if __name__ == "__main__":
     ).to(device)
 
     optimizer = torch.optim.Adam(
-        model.parameters(), weight_decay=args.weight_decay, lr=args.lr
+        model.parameters(), weight_decay=model_para["weight_decay"], lr=model_para["lr"]
     )
-    scheduler = ReduceLROnPlateau(optimizer, "min", patience=3, factor=0.1)
+    scheduler = ReduceLROnPlateau(optimizer, "min", patience=3, factor=0.5)
     """Train phase"""
     print("Start training ... ")
 
