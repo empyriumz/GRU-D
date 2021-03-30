@@ -12,22 +12,28 @@ class MortalityDataLoader:
             df = pd.read_csv(listfile)
             data = {"x": [], "last_x":[], "y": [], "interval": [], "mask": []}
             names = df['stay'].values
-            data["y"] = df['y_true'].values
+            y = df['y_true'].values
+            y_values = dict(zip(names, y))
             for file_name in names:
                 tmp_df = pd.read_csv(self._dataset_dir+"/"+file_name)
                 tmp_df = tmp_df.dropna(how="all")
                 tmp_data = tmp_df[["Hours", "Diastolic blood pressure"]].rename(columns={"Diastolic blood pressure": "x"})
+                # get rid of patients with all NA values in x
+                if tmp_data["x"].isna().sum() == tmp_data.shape[0]:
+                    continue
                 tmp_data = tmp_data.sort_values(by=["Hours"])
                 tmp_data["interval"] = tmp_data["Hours"].diff().fillna(0)
                 tmp_data["mask"] = tmp_data["x"].apply(lambda x: 1 if x == x else 0)
+                tmp_data["x"] = (tmp_data["x"] - tmp_data["x"].mean()) / tmp_data["x"].std()
                 tmp_data["x"] = tmp_data["x"].fillna(0)
                 tmp_data["last_x"] = tmp_data["x"].shift().fillna(0)         
                 data["x"].append(tmp_data["x"].values)
                 data["last_x"].append(tmp_data["last_x"].values)
                 data["interval"].append(tmp_data["interval"].values)
                 data["mask"].append(tmp_data["mask"].values)
-                if partial_data and len(data["x"]) == 1024:
-                    data["y"] = data["y"][:1024]
+                data["y"].append(y_values[file_name])
+                if partial_data and len(data["x"]) == 2048:
+                    data["y"] = data["y"][:2048]
                     break
             
             self._data = data
@@ -37,7 +43,7 @@ class MortalityDataLoader:
 
 # sample_data_loader = MortalityDataLoader(
 #         dataset_dir="/host/StageNet/mortality_data/train",
-#         listfile="/host/StageNet/mortality_data/val-mortality.csv",
+#         listfile="/host/StageNet/mortality_data/train-mortality.csv",
 #         partial_data=1,
 #     )
 # sample_data = {}

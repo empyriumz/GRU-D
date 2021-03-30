@@ -33,7 +33,7 @@ def parse_arguments(parser):
         "--partial_data", "-p", type=int, default=0, help="Use part of the training data"
     )
     parser.add_argument(
-        "--batch_size", type=int, default=256, help="Training batch size"
+        "--batch_size", type=int, default=32, help="Training batch size"
     )
     parser.add_argument("--epochs", "-e", type=int, default=20, help="Training epochs")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
@@ -146,15 +146,14 @@ if __name__ == "__main__":
 
             # cut long sequence
             if batch_x.size()[1] > 400:
-                batch_x = batch_x[:, :400, :]
-                batch_x_last = batch_x_last[:, :400, :]
-                batch_y = batch_y[:, :400, :]
-                batch_interval = batch_interval[:, :400, :]
-                batch_mask = batch_mask[:, :400, :]
+                batch_x = batch_x[:, :400]
+                batch_x_last = batch_x_last[:, :400]
+                batch_y = batch_y[:, :400]
+                batch_interval = batch_interval[:, :400]
+                batch_mask = batch_mask[:, :400]
 
             optimizer.zero_grad()
             output = model(batch_x, batch_x_last, batch_interval, batch_mask, device)
-            output = output.mean(axis=1)
             loss = pos_weight * batch_y * torch.log(output + 1e-7) + (
                 1 - batch_y
             ) * torch.log(1 - output + 1e-7)
@@ -181,6 +180,7 @@ if __name__ == "__main__":
                 val_y = val_data["data"][2]
 
                 val_x = torch.tensor(val_x, dtype=torch.float32).to(device)
+                val_x_last = torch.tensor(val_x_last, dtype=torch.float32).to(device)
                 val_y = torch.tensor(val_y, dtype=torch.float32).to(device)
                 val_interval = torch.tensor(
                     val_data["interval"], dtype=torch.float32
@@ -190,18 +190,17 @@ if __name__ == "__main__":
                 )
 
                 if val_x.size()[1] > 400:
-                    val_x = val_x[:, :400, :]
-                    val_y = val_y[:, :400, :]
-                    val_interval = val_interval[:, :400, :]
-                    val_mask = val_mask[:, :400, :]
+                    val_x = val_x[:, :400]
+                    val_y = val_y[:, :400]
+                    val_interval = val_interval[:, :400]
+                    val_mask = val_mask[:, :400]
 
                 val_output = model(val_x, val_x_last, val_interval, val_mask, device)
-                val_output = val_output.mean(axis=1)
-                val_loss = pos_weight * val_y * torch.log(val_output + 1e-7) + (
+                loss = pos_weight * val_y * torch.log(val_output + 1e-7) + (
                     1 - val_y
                 ) * torch.log(1 - val_output + 1e-7)
-                val_loss = torch.neg(torch.sum(val_loss)) / val_x.size()[0]
-                cur_val_loss.append(val_loss.cpu().detach().numpy())
+                loss = torch.neg(torch.sum(loss)) / val_x.size()[0]
+                cur_val_loss.append(loss.cpu().detach().numpy())
 
                 for t, p in zip(
                     val_y.cpu().numpy().flatten(),
